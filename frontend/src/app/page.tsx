@@ -109,7 +109,6 @@ export default function Home() {
     try {
       const params = new URLSearchParams();
       params.set("limit", "5");
-      params.set("searchQuery", "casper liquid staking subscriptions");
 
       const response = await fetch(`/api/chaingpt-news?${params.toString()}`);
 
@@ -155,19 +154,23 @@ export default function Home() {
       }
 
       const json = await response.json();
+      console.log("chaingpt:/api/chaingpt-news response", json);
       const core = json?.data;
 
       let items: any[] = [];
       if (Array.isArray(core)) {
         items = core;
-      } else if (core && Array.isArray(core.items)) {
-        items = core.items;
-      } else if (core && Array.isArray(core.results)) {
-        items = core.results;
+      } else if (core && Array.isArray((core as any).data)) {
+        // Shape: { statusCode, message, data: [...] }
+        items = (core as any).data;
+      } else if (core && Array.isArray((core as any).items)) {
+        items = (core as any).items;
+      } else if (core && Array.isArray((core as any).results)) {
+        items = (core as any).results;
       } else if (Array.isArray(json)) {
         items = json;
-      } else if (json && Array.isArray(json.items)) {
-        items = json.items;
+      } else if (json && Array.isArray((json as any).items)) {
+        items = (json as any).items;
       }
 
       const mapped = items.slice(0, 3).map((item) => ({
@@ -176,6 +179,15 @@ export default function Home() {
         createdAt:
           typeof item?.createdAt === "string" ? item.createdAt : undefined,
       }));
+
+      if (!mapped.length) {
+        setAiNewsError(
+          "ChainGPT did not return any news for this query. Integration is live; you can retry later or broaden the query."
+        );
+        setAiNewsItems([]);
+        setAiNewsRaw(null);
+        return;
+      }
 
       setAiNewsItems(mapped);
       setAiNewsRaw(JSON.stringify(mapped, null, 2));
@@ -912,23 +924,6 @@ export default function Home() {
               Hackathon prototype
             </span>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
-            <button
-              type="button"
-              onClick={handleAiNewsClick}
-              disabled={aiNewsLoading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/70 bg-emerald-400/10 px-3 py-1.5 font-medium text-emerald-200 shadow-[0_0_18px_rgba(52,211,153,0.45)] ring-1 ring-emerald-400/50 transition-all hover:bg-emerald-400/20 hover:text-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {aiNewsLoading
-                ? "Fetching AI news..."
-                : "Fetch AI news (ChainGPT)"}
-            </button>
-            {aiNewsError && (
-              <span className="max-w-xs text-[10px] text-zinc-400">
-                {aiNewsError}
-              </span>
-            )}
-          </div>
         </section>
 
         <div
@@ -1293,8 +1288,8 @@ export default function Home() {
                       AI news (ChainGPT)
                     </span>
                     <p className="mt-1 text-[11px] text-zinc-500">
-                      Fetch AI-curated crypto news related to Casper & liquid
-                      staking.
+                      AI-curated crypto news around Casper, liquid staking, DeFi
+                      and subscription payments.
                     </p>
                   </div>
                   <button

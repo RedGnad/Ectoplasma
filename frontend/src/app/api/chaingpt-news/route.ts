@@ -16,8 +16,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const searchQuery =
-    url.searchParams.get("searchQuery") ?? "casper liquid staking subscriptions";
+  const searchQuery = url.searchParams.get("searchQuery") ?? "";
   const limitParam = url.searchParams.get("limit");
 
   let limit = 5;
