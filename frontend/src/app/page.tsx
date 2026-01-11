@@ -88,10 +88,105 @@ export default function Home() {
     string | null
   >(null);
   const [demoSubscriptions, setDemoSubscriptions] = useState<number[]>([]);
+  const [aiNewsLoading, setAiNewsLoading] = useState(false);
+  const [aiNewsError, setAiNewsError] = useState<string | null>(null);
+  const [aiNewsRaw, setAiNewsRaw] = useState<string | null>(null);
+  const [aiNewsItems, setAiNewsItems] = useState<
+    { title: string; url?: string; createdAt?: string }[]
+  >([]);
 
   const handleConnectClick = () => {
     if (typeof window !== "undefined" && (window as any).csprclick) {
       (window as any).csprclick.signIn();
+    }
+  };
+
+  const handleAiNewsClick = async () => {
+    setAiNewsLoading(true);
+    setAiNewsError(null);
+    setAiNewsRaw(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", "5");
+      params.set("searchQuery", "casper liquid staking subscriptions");
+
+      const response = await fetch(`/api/chaingpt-news?${params.toString()}`);
+
+      if (!response.ok) {
+        const text = await response.text();
+        let friendly = `ChainGPT backend error (${response.status})`;
+
+        try {
+          const parsed: any = JSON.parse(text);
+          let detail = "";
+
+          if (parsed && typeof parsed.error === "string") {
+            detail = parsed.error;
+          }
+
+          if (parsed && typeof parsed.body === "string") {
+            try {
+              const inner: any = JSON.parse(parsed.body);
+              if (inner && typeof inner.message === "string") {
+                detail = inner.message;
+              }
+            } catch {
+              if (!detail) {
+                detail = parsed.body;
+              }
+            }
+          }
+
+          if (detail) {
+            if (/insufficient credits/i.test(detail)) {
+              friendly =
+                "ChainGPT: insufficient credits on this API key – integration is wired but live news cannot be fetched in this demo.";
+            } else {
+              friendly = `ChainGPT API error: ${detail}`;
+            }
+          }
+        } catch {
+          // keep default friendly message
+        }
+
+        setAiNewsError(friendly);
+        return;
+      }
+
+      const json = await response.json();
+      const core = json?.data;
+
+      let items: any[] = [];
+      if (Array.isArray(core)) {
+        items = core;
+      } else if (core && Array.isArray(core.items)) {
+        items = core.items;
+      } else if (core && Array.isArray(core.results)) {
+        items = core.results;
+      } else if (Array.isArray(json)) {
+        items = json;
+      } else if (json && Array.isArray(json.items)) {
+        items = json.items;
+      }
+
+      const mapped = items.slice(0, 3).map((item) => ({
+        title: String(item?.title ?? "Untitled"),
+        url: typeof item?.url === "string" ? item.url : undefined,
+        createdAt:
+          typeof item?.createdAt === "string" ? item.createdAt : undefined,
+      }));
+
+      setAiNewsItems(mapped);
+      setAiNewsRaw(JSON.stringify(mapped, null, 2));
+    } catch (error) {
+      setAiNewsError(
+        error instanceof Error
+          ? error.message
+          : "Unexpected error while calling ChainGPT API"
+      );
+    } finally {
+      setAiNewsLoading(false);
     }
   };
 
@@ -817,6 +912,23 @@ export default function Home() {
               Hackathon prototype
             </span>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px]">
+            <button
+              type="button"
+              onClick={handleAiNewsClick}
+              disabled={aiNewsLoading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/70 bg-emerald-400/10 px-3 py-1.5 font-medium text-emerald-200 shadow-[0_0_18px_rgba(52,211,153,0.45)] ring-1 ring-emerald-400/50 transition-all hover:bg-emerald-400/20 hover:text-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {aiNewsLoading
+                ? "Fetching AI news..."
+                : "Fetch AI news (ChainGPT)"}
+            </button>
+            {aiNewsError && (
+              <span className="max-w-xs text-[10px] text-zinc-400">
+                {aiNewsError}
+              </span>
+            )}
+          </div>
         </section>
 
         <div
@@ -1171,6 +1283,69 @@ export default function Home() {
                   <p className="mt-1 text-[10px] text-zinc-500">
                     Min stake: 2 500 CSPR (Spotify), 5 000 CSPR (Netflix).
                   </p>
+                </div>
+              </div>
+
+              <div className="space-y-1 rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+                      AI news (ChainGPT)
+                    </span>
+                    <p className="mt-1 text-[11px] text-zinc-500">
+                      Fetch AI-curated crypto news related to Casper & liquid
+                      staking.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAiNewsClick}
+                    disabled={aiNewsLoading}
+                    className="h-8 rounded-full border border-emerald-400/70 bg-emerald-400/10 px-3 text-[11px] font-medium text-emerald-200 hover:bg-emerald-400/20 hover:text-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {aiNewsLoading ? "Loading..." : "Fetch AI news"}
+                  </button>
+                </div>
+                <div className="mt-2 space-y-1 text-[11px]">
+                  {aiNewsError && <p className="text-red-400">{aiNewsError}</p>}
+                  {!aiNewsError &&
+                    aiNewsItems.length === 0 &&
+                    !aiNewsLoading && (
+                      <p className="text-zinc-500">
+                        No AI news fetched yet in this session.
+                      </p>
+                    )}
+                  {!aiNewsError && aiNewsItems.length > 0 && (
+                    <ul className="space-y-1">
+                      {aiNewsItems.map((item, idx) => (
+                        <li
+                          key={idx}
+                          className="rounded-md border border-zinc-800/80 bg-zinc-950/70 px-2 py-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-medium text-zinc-100">
+                              {item.title}
+                            </span>
+                            {item.url && (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="shrink-0 text-[10px] text-emerald-300 hover:text-emerald-200"
+                              >
+                                Open
+                              </a>
+                            )}
+                          </div>
+                          {item.createdAt && (
+                            <p className="mt-0.5 text-[10px] text-zinc-500">
+                              {item.createdAt}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
 
