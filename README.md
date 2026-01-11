@@ -1,4 +1,11 @@
 Ectoplasma – Stake‑to‑Subscribe Vault on Casper
+
+At the core, Ectoplasma is a **liquid staking subscription vault** on Casper:
+
+- Users stake CSPR into the vault contract.
+- Their position remains liquid and observable on-chain.
+- Recurring subscription payments can be funded fully or partially from the staking yield, instead of spending the principal.
+
 1. Problem
 Subscriptions today rely on opaque, off‑chain billing:
 
@@ -12,7 +19,7 @@ For Web3 users on Casper, this means:
 
 CSPR is often idle in wallets.
 Subscriptions to Web2 services (Netflix, Spotify, gift cards, etc.) are not natively connected to on‑chain balances.
-Developers must rebuild billing logic off‑chain, losing auditability.
+Developers must rebuild billing logic off‑chain, losing auditability. Today, staking and subscriptions are siloed: users either keep CSPR idle to pay subscriptions, or lock it to earn yield. There is no native way to have both – liquid staking and recurring payments – in a single, composable on-chain primitive.
 Ectoplasma explores how on‑chain vaults on Casper can power recurring payments, while remaining compatible with Web2 payment providers.
 
 2. High‑Level Overview

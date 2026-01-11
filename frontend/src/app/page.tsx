@@ -880,7 +880,7 @@ export default function Home() {
 
         <section className="max-w-3xl space-y-3 text-xs md:text-sm text-zinc-400">
           <h2 className="text-sm font-semibold tracking-tight text-zinc-100">
-            How it works (hackathon prototype)
+            How it works
           </h2>
           <div className="grid gap-3 md:grid-cols-3">
             <div className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 p-3">
